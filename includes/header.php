@@ -9,6 +9,7 @@ require 'config/config.php';
 include('includes/classes/User.php');
 include('includes/classes/Post.php');
 include('includes/classes/Message.php');
+include('includes/classes/Notification.php');
 
 if (isset($_SESSION['username'])) {
     $userLoggedIn = $_SESSION['username'];
@@ -53,6 +54,14 @@ if (isset($_SESSION['username'])) {
         //            Unread messages
         $messages = new Message($con, $userLoggedIn);
         $num_messages = $messages->getUnreadNumber();
+
+        //            Unread notifications
+        $notifications = new Notification($con, $userLoggedIn);
+        $num_notifications = $notifications->getUnreadNumber();
+
+        //            Unread notifications
+        $user_obj = new User($con, $userLoggedIn);
+        $num_requests = $user_obj->getNumberOfFriendRequests();
         ?>
 
         <a href="<?php echo 'profile.php?profile_username=' . $userLoggedIn; ?>">
@@ -72,12 +81,22 @@ if (isset($_SESSION['username'])) {
             }
             ?>
         </a>
-        <a href="#">
+        <a href="javascript:void(0);" onclick="getDropdownData('<?php echo $userLoggedIn; ?>','notification')">
             <i class="fa fa-bell fa-lg"></i>
+            <?php
+            if ($num_notifications > 0) {
+                echo '<span class="notification_badge" id="unread_notification">' . $num_notifications . '</span>';
+            }
+            ?>
         </a>
 
         <a href="requests.php">
             <i class="fa fa-users fa-lg"></i>
+            <?php
+            if ($num_requests > 0) {
+                echo '<span class="notification_badge" id="unread_requests">' . $num_requests . '</span>';
+            }
+            ?>
         </a>
 
         <a href="#">
@@ -114,7 +133,7 @@ if (isset($_SESSION['username'])) {
                 var type = $('#dropdown_data_type').val();
 
                 if (type == 'notification') {
-                    pageName = "ajax_load_notification.php";
+                    pageName = "ajax_load_notifications.php";
                 }
                 else if (type == "messages") {
                     pageName = "ajax_load_messages.php";
@@ -127,7 +146,7 @@ if (isset($_SESSION['username'])) {
                     cache: false,
 
                     success: function (response) {
-                        $('.dropdown_data_window').find('.nextPageDropDownData').remove();//Removes current .nextpage
+                        $('.dropdown_data_window').find('.nextPageDropdownData').remove();//Removes current .nextpage
                         $('.dropdown_data_window').find('.noMoreDropdownData').remove();//Removes current .nextpage
 
                         $('.dropdown_data_window').append(response);
@@ -150,4 +169,4 @@ if (isset($_SESSION['username'])) {
 <div class="wrapper">
 
 
-</body>
+<!--</body>-->

@@ -29,7 +29,9 @@ function getDropdownData(user, type) {
     if ($(".dropdown_data_window").css("height") == "0px") {
         var pageName;
 
-        if (type == "notification") {
+        if (type == 'notification') {
+            pageName = "ajax_load_notifications.php";
+            $("span").remove("#unread_notification");
         }
         else if (type == 'message') {
             pageName = "ajax_load_messages.php";
@@ -45,7 +47,7 @@ function getDropdownData(user, type) {
             success: function (response) {
                 $(".dropdown_data_window").html(response);
                 $(".dropdown_data_window").css({"padding": "0px", "height": "280px", "border": "1px solid #dadada"});
-                $(".dropdown_data_type").val(type);
+                $("#dropdown_data_type").val(type);
             }
         });
     }
