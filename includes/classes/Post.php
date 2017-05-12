@@ -25,6 +25,20 @@ class Post
         if ($check_empty != "") {
 
 
+            $body_array = preg_split("/\s+/", $body);
+
+            foreach ($body_array as $key => $value) {
+                if (strpos($value, "www.youtube.com/watch?v=") !== false) {
+                    $link = preg_split("!&!", $value);
+                    $value = preg_replace("!watch\?v=!", "embed/", $link[0]);
+                    $value = "<br><iframe width=\'420\' height=\'315\' src=\'" . $value . "\'></iframe><br>";
+                    $body_array[$key] = $value;
+                }
+            }
+
+            $body = implode(" ", $body_array);
+
+
 //            Current date and time
             $date_added = date("Y-m-d H:i:s");
 //            Get username
@@ -483,123 +497,123 @@ class Post
         if (mysqli_num_rows($data_query) > 0) {
 
             $row = mysqli_fetch_array($data_query);
-                $id = $row['id'];
-                $body = $row['body'];
-                $added_by = $row['added_by'];
-                $date_time = $row['date_added'];
+            $id = $row['id'];
+            $body = $row['body'];
+            $added_by = $row['added_by'];
+            $date_time = $row['date_added'];
 
 //            Prepare user_to string so it can be included even if not posted to a user
-                if ($row['user_to'] == "none") {
-                    $user_to = "";
-                } else {
-                    $user_to_obj = new User($this->con, $row['user_to']);
-                    $user_to_name = $user_to_obj->getFirstAndLastName();
-                    $user_to = "to <a href='profile.php?profile_username=" . $row['user_to'] . "'>" . $user_to_name . "</a>";
-                }
+            if ($row['user_to'] == "none") {
+                $user_to = "";
+            } else {
+                $user_to_obj = new User($this->con, $row['user_to']);
+                $user_to_name = $user_to_obj->getFirstAndLastName();
+                $user_to = "to <a href='profile.php?profile_username=" . $row['user_to'] . "'>" . $user_to_name . "</a>";
+            }
 
 //            Check if user who posted, has their account closed
-                $added_by_obj = new User($this->con, $added_by);
+            $added_by_obj = new User($this->con, $added_by);
 
-                if ($added_by_obj->isClosed()) {
-                    return;
+            if ($added_by_obj->isClosed()) {
+                return;
+            }
+
+            $user_logged_obj = new User($this->con, $userLoggedIn);
+
+            if ($user_logged_obj->isFriend($added_by)) {
+
+                if ($userLoggedIn == $added_by) {
+                    $delete_button = "<button class='delete_button btn-danger' id='post$id'>X</button>";
+                } else {
+                    $delete_button = "";
                 }
 
-                $user_logged_obj = new User($this->con, $userLoggedIn);
 
-                if ($user_logged_obj->isFriend($added_by)) {
+                $user_details_query = mysqli_query($this->con, "SELECT first_name,last_name,profile_pic FROM users WHERE username = '$added_by'");
+                $user_row = mysqli_fetch_array($user_details_query);
+                $first_name = $user_row['first_name'];
+                $last_name = $user_row['last_name'];
+                $profile_pic = $user_row['profile_pic'];
+                ?>
 
-                    if ($userLoggedIn == $added_by) {
-                        $delete_button = "<button class='delete_button btn-danger' id='post$id'>X</button>";
-                    } else {
-                        $delete_button = "";
-                    }
+                <script>
+                    function <?php echo 'toggle' . $id;?>() {
 
+                        var target = $(event.target);
+                        if (!target.is("a")) {
+                            var element = document.getElementById("toggleComment<?php echo $id; ?>");
 
-                    $user_details_query = mysqli_query($this->con, "SELECT first_name,last_name,profile_pic FROM users WHERE username = '$added_by'");
-                    $user_row = mysqli_fetch_array($user_details_query);
-                    $first_name = $user_row['first_name'];
-                    $last_name = $user_row['last_name'];
-                    $profile_pic = $user_row['profile_pic'];
-                    ?>
-
-                    <script>
-                        function <?php echo 'toggle' . $id;?>() {
-
-                            var target = $(event.target);
-                            if (!target.is("a")) {
-                                var element = document.getElementById("toggleComment<?php echo $id; ?>");
-
-                                if (element.style.display == "block") {
-                                    element.style.display = "none";
-                                }
-                                else {
-                                    element.style.display = "block";
-                                }
-
+                            if (element.style.display == "block") {
+                                element.style.display = "none";
+                            }
+                            else {
+                                element.style.display = "block";
                             }
 
                         }
-                    </script>
 
-                    <?php
+                    }
+                </script>
+
+                <?php
 
 
-                    $comments_check = mysqli_query($this->con, "SELECT * FROM comments WHERE post_id ='$id'");
-                    $comments_check_num = mysqli_num_rows($comments_check);
+                $comments_check = mysqli_query($this->con, "SELECT * FROM comments WHERE post_id ='$id'");
+                $comments_check_num = mysqli_num_rows($comments_check);
 
 //            Timeframe
-                    $date_time_now = date("Y-m-d H:i:s");
-                    $start_date = new DateTime($date_time);//Time of post
-                    $end_date = new DateTime($date_time_now);//Current time
-                    $interval = $start_date->diff($end_date);//Difference between dates
-                    if ($interval->y >= 1) {
-                        if ($interval->y == 1) {
-                            $time_message = $interval->y . " year ago";//1 year ago
-                        } else {
-                            $time_message = $interval->y . " years ago";//1+ year ago
-                        }
-                    } elseif ($interval->m >= 1) {
-                        if ($interval->d == 0) {
-                            $days = " ago";
-                        } elseif ($interval->d == 1) {
-                            $days = $interval->d . " day ago";
-                        } else {
-                            $days = $interval->d . " days ago";
-                        }
-
-                        if ($interval->m == 1) {
-                            $time_message = $interval->m . " month" . $days;
-                        } else {
-                            $time_message = $interval->m . " months" . $days;
-                        }
-
-                    } elseif ($interval->d >= 1) {
-                        if ($interval->d == 1) {
-                            $time_message = "Yesterday";
-                        } else {
-                            $time_message = $interval->d . " days ago";
-                        }
-                    } elseif ($interval->h >= 1) {
-                        if ($interval->h == 1) {
-                            $time_message = $interval->h . " hour ago";
-                        } else {
-                            $time_message = $interval->h . " hours ago";
-                        }
-                    } elseif ($interval->i >= 1) {
-                        if ($interval->i == 1) {
-                            $time_message = $interval->i . " minute ago";
-                        } else {
-                            $time_message = $interval->i . " minutes ago";
-                        }
+                $date_time_now = date("Y-m-d H:i:s");
+                $start_date = new DateTime($date_time);//Time of post
+                $end_date = new DateTime($date_time_now);//Current time
+                $interval = $start_date->diff($end_date);//Difference between dates
+                if ($interval->y >= 1) {
+                    if ($interval->y == 1) {
+                        $time_message = $interval->y . " year ago";//1 year ago
                     } else {
-                        if ($interval->s < 30) {
-                            $time_message = "Just now";
-                        } else {
-                            $time_message = $interval->s . " seconds ago";
-                        }
+                        $time_message = $interval->y . " years ago";//1+ year ago
+                    }
+                } elseif ($interval->m >= 1) {
+                    if ($interval->d == 0) {
+                        $days = " ago";
+                    } elseif ($interval->d == 1) {
+                        $days = $interval->d . " day ago";
+                    } else {
+                        $days = $interval->d . " days ago";
                     }
 
-                    $str .= "<div class='status_post' onClick='javascript:toggle$id()'>
+                    if ($interval->m == 1) {
+                        $time_message = $interval->m . " month" . $days;
+                    } else {
+                        $time_message = $interval->m . " months" . $days;
+                    }
+
+                } elseif ($interval->d >= 1) {
+                    if ($interval->d == 1) {
+                        $time_message = "Yesterday";
+                    } else {
+                        $time_message = $interval->d . " days ago";
+                    }
+                } elseif ($interval->h >= 1) {
+                    if ($interval->h == 1) {
+                        $time_message = $interval->h . " hour ago";
+                    } else {
+                        $time_message = $interval->h . " hours ago";
+                    }
+                } elseif ($interval->i >= 1) {
+                    if ($interval->i == 1) {
+                        $time_message = $interval->i . " minute ago";
+                    } else {
+                        $time_message = $interval->i . " minutes ago";
+                    }
+                } else {
+                    if ($interval->s < 30) {
+                        $time_message = "Just now";
+                    } else {
+                        $time_message = $interval->s . " seconds ago";
+                    }
+                }
+
+                $str .= "<div class='status_post' onClick='javascript:toggle$id()'>
                                 <div class='post_profile_pic'>
                                     <img src='$profile_pic' width = '50' >
                                 </div>
@@ -630,33 +644,32 @@ class Post
                     </div>
                     <hr>
             ";
-                    ?>
+                ?>
 
 
-                    <script>
-                        $(document).ready(function () {
-                            $('#post<?php echo $id?>').on('click', function () {
-                                bootbox.confirm("Are you sure you want to delete this post?", function (result) {
-                                    $.post("includes/form_handlers/delete_post.php?post_id=<?php echo $id;?>", {result: result});
+                <script>
+                    $(document).ready(function () {
+                        $('#post<?php echo $id?>').on('click', function () {
+                            bootbox.confirm("Are you sure you want to delete this post?", function (result) {
+                                $.post("includes/form_handlers/delete_post.php?post_id=<?php echo $id;?>", {result: result});
 
-                                    if (result) {
-                                        location.reload();
-                                    }
-                                });
+                                if (result) {
+                                    location.reload();
+                                }
                             });
                         });
+                    });
 
-                    </script>
-                    <?php
-                } else {
-                    echo "<p>You cannot see this post because you are not friends with this user.</p>";
-                    return;
-                }
+                </script>
+                <?php
+            } else {
+                echo "<p>You cannot see this post because you are not friends with this user.</p>";
+                return;
+            }
             ?>
             <?php
 
-        }
-        else{
+        } else {
             echo "<p>No post found. If you clicked a link, it may be broken.</p>";
             return;
         }
